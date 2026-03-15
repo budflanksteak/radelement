@@ -32,7 +32,7 @@ const DEMO_USERS: (User & { password: string })[] = [
   },
   {
     id: 'user-3',
-    email: 'admin@radelement.org',
+    email: 'admin@radiology.org',
     password: 'demo',
     name: 'RadElement Admin',
     role: 'admin',
