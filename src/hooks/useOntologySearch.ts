@@ -1,3 +1,4 @@
+/// <reference types="vite/client" />
 /**
  * useOntologySearch
  *
@@ -5,12 +6,12 @@
  * Sources:
  *   1. RadLex  – two strategies depending on environment:
  *        a. BioPortal (preferred) — live search of the full 34k-term RadLex ontology
- *                                   when VITE_BIOPORTAL_KEY is set in .env
- *                                   (proxied: /bioportal → https://data.bioontology.org)
+ *                                   via /api/bioportal proxy (key held server-side in
+ *                                   Vercel env var, or in .env for local dev)
  *        b. RadElement fallback   — 178 curated terms from /api/radelement/v1/codes/radlex,
- *                                   fetched once and cached when no API key is present
+ *                                   fetched once and cached when BioPortal is unavailable
  *   2. SNOMED CT – queried live via the SNOMED International Snowstorm public server
- *                  (proxied through Vite: /snomed → https://browser.ihtsdotools.org/snowstorm/snomed-ct)
+ *                  (proxied: /api/snomed → https://browser.ihtsdotools.org/snowstorm/snomed-ct)
  */
 
 import { useState, useEffect, useRef } from 'react';
@@ -90,18 +91,17 @@ async function getRadlexTerms(): Promise<OntologyTerm[]> {
 }
 
 // ── BioPortal RadLex search (full 34k-term ontology) ──────────────────────
-
-const BIOPORTAL_KEY = import.meta.env.VITE_BIOPORTAL_KEY as string | undefined;
+// The API key is held server-side (Vercel env var BIOPORTAL_KEY in production,
+// VITE_BIOPORTAL_KEY in .env for local dev). The proxy returns 503 when the key
+// is missing, which we treat as "unavailable" and fall back to the curated list.
 
 async function searchRadlexBioPortal(query: string): Promise<OntologyTerm[]> {
-  if (!BIOPORTAL_KEY) return [];
   const params = new URLSearchParams({
     q: query,
     ontologies: 'RADLEX',
     pagesize: '10',
     display_context: 'false',
     display_links: 'false',
-    apikey: BIOPORTAL_KEY,
   });
   const res = await fetch(`/api/bioportal/search?${params}`, {
     headers: { Accept: 'application/json' },
@@ -229,33 +229,37 @@ export function useOntologySearch(
 
     timerRef.current = setTimeout(async () => {
       try {
-        // Use BioPortal (full 34k RadLex) if key is configured, otherwise fall
-        // back to the 178 curated terms from the RadElement API
-        const radlexSource = BIOPORTAL_KEY
-          ? searchRadlexBioPortal(query)
-          : getRadlexTerms();
-
-        const [radlexSettled, snomedSettled] = await Promise.allSettled([
-          radlexSource,
+        // Always try BioPortal first (key is held server-side by the proxy).
+        // If the proxy returns nothing (key not configured / network error),
+        // fall back to the 178 curated terms from the RadElement API.
+        const [bioportalSettled, snomedSettled] = await Promise.allSettled([
+          searchRadlexBioPortal(query),
           searchSnomed(query),
         ]);
 
-        const radlexRaw =
-          radlexSettled.status === 'fulfilled' ? radlexSettled.value : [];
+        const bioportalRaw =
+          bioportalSettled.status === 'fulfilled' ? bioportalSettled.value : [];
         const snomedAll =
           snomedSettled.status === 'fulfilled' ? snomedSettled.value : [];
 
-        // BioPortal results are pre-ranked by relevance; fallback needs scoring
-        const radlexFinal = BIOPORTAL_KEY
-          ? radlexRaw
-          : radlexRaw
-              .map(t => ({ t, score: scoreMatch(t.display, query) }))
-              .filter(r => r.score >= 25)
-              .sort((a, b) => b.score - a.score)
-              .slice(0, 5)
-              .map(r => r.t);
+        // BioPortal pre-ranks by relevance. If it returned nothing, score the
+        // curated RadElement list instead.
+        let radlexFinal: OntologyTerm[];
+        if (bioportalRaw.length > 0) {
+          radlexFinal = bioportalRaw;
+        } else {
+          const curated = await getRadlexTerms();
+          radlexFinal = curated
+            .map(t => ({ t, score: scoreMatch(t.display, query) }))
+            .filter(r => r.score >= 25)
+            .sort((a, b) => b.score - a.score)
+            .slice(0, 5)
+            .map(r => r.t);
+        }
 
-        setResults([...radlexFinal, ...snomedAll]);
+        const radlexRaw = radlexFinal; // kept for clarity below
+
+        setResults([...radlexRaw, ...snomedAll]);
       } catch {
         setResults([]);
       } finally {
