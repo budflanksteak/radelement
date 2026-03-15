@@ -1,6 +1,16 @@
 {
-  "routes": [
-    { "handle": "filesystem" },
-    { "src": "/(.*)", "dest": "/index.html" }
+  "rewrites": [
+    {
+      "source": "/api/radelement/:path*",
+      "destination": "https://api3.rsna.org/radelement/:path*"
+    },
+    {
+      "source": "/api/snomed/:path*",
+      "destination": "https://browser.ihtsdotools.org/snowstorm/snomed-ct/:path*"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
   ]
 }
