@@ -1,9 +1,6 @@
 {
   "rewrites": [
-    { "source": "/api/radelement/:path*", "destination": "/api/radelement/:path*" },
-    { "source": "/api/snomed/:path*",     "destination": "/api/snomed/:path*" },
-    { "source": "/api/bioportal/:path*",  "destination": "/api/bioportal/:path*" },
-    { "source": "/(.*)",                  "destination": "/index.html" }
+    { "source": "/(.*)", "destination": "/index.html" }
   ],
   "headers": [
     {
