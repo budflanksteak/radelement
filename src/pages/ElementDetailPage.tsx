@@ -3,12 +3,21 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { ArrowLeft, Hash, ToggleLeft, Ruler, ExternalLink, Database } from 'lucide-react';
 import { fetchElementById } from '../api/radelement';
 
-/** Returns the date string only if it represents a real date (year ≥ 1900). */
+/** Returns the date string only if it represents a real date (year ≥ 1995).
+ *  The CDE effort did not exist before 1995; earlier values are API placeholders. */
 function validDate(d?: string): string | null {
   if (!d) return null;
   const year = parseInt(d.split('-')[0], 10);
-  if (!year || year < 1900) return null;
+  if (!year || year < 1995) return null;
   return d.split('T')[0];
+}
+
+/** Best available publication date: status.date first, then element_version.date. */
+function publicationDate(el: { status?: unknown; element_version?: { date?: string } }): string | null {
+  const statusDate = typeof el.status === 'object' && el.status !== null && 'date' in el.status
+    ? validDate((el.status as { date?: string }).date)
+    : null;
+  return statusDate ?? validDate(el.element_version?.date);
 }
 import { CDEElement, getElementType } from '../types/cde';
 import { StatusBadge } from '../components/cde/StatusBadge';
@@ -205,10 +214,10 @@ export function ElementDetailPage() {
               <p className="text-xs text-slate-500">Version</p>
               <p className="font-semibold text-slate-900 dark:text-white">{element.element_version.number}</p>
             </div>
-            {validDate(element.element_version.date) && (
+            {publicationDate(element) && (
               <div>
-                <p className="text-xs text-slate-500">Date</p>
-                <p className="font-semibold text-slate-900 dark:text-white">{validDate(element.element_version.date)}</p>
+                <p className="text-xs text-slate-500">Published</p>
+                <p className="font-semibold text-slate-900 dark:text-white">{publicationDate(element)}</p>
               </div>
             )}
             {element.schema_version && (

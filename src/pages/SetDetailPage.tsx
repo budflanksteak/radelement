@@ -6,12 +6,21 @@ import {
 } from 'lucide-react';
 import { fetchSetById } from '../api/radelement';
 
-/** Returns the date string only if it represents a real date (year ≥ 1900). */
+/** Returns the date string only if it represents a real date (year ≥ 1995).
+ *  The CDE effort did not exist before 1995; earlier values are API placeholders. */
 function validDate(d?: string): string | null {
   if (!d) return null;
   const year = parseInt(d.split('-')[0], 10);
-  if (!year || year < 1900) return null;
+  if (!year || year < 1995) return null;
   return d.split('T')[0];
+}
+
+/** Best available publication date: status.date first, then set_version.date. */
+function publicationDate(set: { status?: unknown; set_version?: { date?: string } }): string | null {
+  const statusDate = typeof set.status === 'object' && set.status !== null && 'date' in set.status
+    ? validDate((set.status as { date?: string }).date)
+    : null;
+  return statusDate ?? validDate(set.set_version?.date);
 }
 import { CDESet, CDEElement, getStatusName, getElementType } from '../types/cde';
 import { StatusBadge } from '../components/cde/StatusBadge';
@@ -362,9 +371,12 @@ export function SetDetailPage() {
         <div className="mt-5 pt-5 border-t border-slate-100 dark:border-slate-700 flex gap-6 text-sm text-slate-600 dark:text-slate-400 flex-wrap">
           <span><strong className="text-slate-900 dark:text-white">{set.elements.length}</strong> elements</span>
           {set.set_version && (
-            <span>
-              <strong className="text-slate-900 dark:text-white">v{set.set_version.number}</strong>
-              {validDate(set.set_version.date) && ` (${validDate(set.set_version.date)})`}
+            <span><strong className="text-slate-900 dark:text-white">v{set.set_version.number}</strong></span>
+          )}
+          {publicationDate(set) && (
+            <span className="flex items-center gap-1">
+              <Calendar size={13} />
+              Published {publicationDate(set)}
             </span>
           )}
           {set.schema_version && <span>Schema {set.schema_version}</span>}
