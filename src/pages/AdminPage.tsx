@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ShieldCheck, Users, FileEdit, MessageSquare, RefreshCw, ChevronDown } from 'lucide-react';
+import { ShieldCheck, Users, FileEdit, MessageSquare, RefreshCw, ChevronDown, UserCheck, UserX } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { supabase } from '../lib/supabase';
 import { UserRole } from '../types/cde';
@@ -12,6 +12,7 @@ interface Profile {
   role: UserRole;
   organization?: string;
   created_at: string;
+  is_active: boolean;
 }
 
 interface DraftRow {
@@ -54,6 +55,7 @@ export function AdminPage() {
   const [loadingDrafts, setLoadingDrafts] = useState(false);
   const [loadingComments, setLoadingComments] = useState(false);
   const [roleUpdating, setRoleUpdating] = useState<string | null>(null);
+  const [activeToggling, setActiveToggling] = useState<string | null>(null);
 
   // Guard: redirect non-admins
   useEffect(() => {
@@ -112,6 +114,22 @@ export function AdminPage() {
       console.error('Role update failed:', error.message);
     }
     setRoleUpdating(null);
+  }
+
+  async function handleToggleActive(profileId: string, currentlyActive: boolean) {
+    setActiveToggling(profileId);
+    const { error } = await supabase
+      .from('profiles')
+      .update({ is_active: !currentlyActive })
+      .eq('id', profileId);
+    if (!error) {
+      setProfiles(prev =>
+        prev.map(p => p.id === profileId ? { ...p, is_active: !currentlyActive } : p)
+      );
+    } else {
+      console.error('Failed to toggle active state:', error.message);
+    }
+    setActiveToggling(null);
   }
 
   async function handleDeleteDraft(id: string) {
@@ -181,7 +199,7 @@ export function AdminPage() {
             <table className="w-full text-sm">
               <thead className="bg-slate-50 dark:bg-slate-700/50">
                 <tr>
-                  {['Name', 'Email', 'Organization', 'Role', 'Joined'].map(h => (
+                  {['Name', 'Email', 'Organization', 'Role', 'Joined', ''].map(h => (
                     <th key={h} className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                       {h}
                     </th>
@@ -192,7 +210,12 @@ export function AdminPage() {
                 {profiles.map(profile => (
                   <tr key={profile.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
                     <td className="px-4 py-3 font-medium text-slate-900 dark:text-white">
-                      {profile.name || <span className="text-slate-400 italic">—</span>}
+                      <span className={profile.is_active ? '' : 'line-through text-slate-400'}>
+                        {profile.name || <span className="text-slate-400 italic">—</span>}
+                      </span>
+                      {!profile.is_active && (
+                        <span className="ml-2 text-xs text-red-500 font-normal not-italic no-underline" style={{textDecoration:'none'}}>deactivated</span>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-slate-500 dark:text-slate-400">{profile.email}</td>
                     <td className="px-4 py-3 text-slate-500 dark:text-slate-400">
@@ -223,6 +246,25 @@ export function AdminPage() {
                     </td>
                     <td className="px-4 py-3 text-slate-400 text-xs">
                       {new Date(profile.created_at).toLocaleDateString()}
+                    </td>
+                    <td className="px-4 py-3">
+                      {profile.id !== user.id && (
+                        <button
+                          onClick={() => handleToggleActive(profile.id, profile.is_active)}
+                          disabled={activeToggling === profile.id}
+                          title={profile.is_active ? 'Deactivate account' : 'Reactivate account'}
+                          className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-medium transition-colors disabled:opacity-50 ${
+                            profile.is_active
+                              ? 'bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/40'
+                              : 'bg-teal-50 text-teal-600 hover:bg-teal-100 dark:bg-teal-900/20 dark:text-teal-400 dark:hover:bg-teal-900/40'
+                          }`}
+                        >
+                          {profile.is_active
+                            ? <><UserX size={12} /> Deactivate</>
+                            : <><UserCheck size={12} /> Reactivate</>
+                          }
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))}

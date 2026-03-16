@@ -19,6 +19,11 @@ async function fetchProfile(userId: string): Promise<User | null> {
     .eq('id', userId)
     .single();
   if (error || !data) return null;
+  // Deactivated accounts are treated as logged-out
+  if (data.is_active === false) {
+    await supabase.auth.signOut();
+    throw new Error('Your account has been deactivated. Please contact an administrator.');
+  }
   return {
     id: data.id,
     email: data.email ?? '',
@@ -36,8 +41,12 @@ export const useAuthStore = create<AuthState>()((set) => ({
   initialize: () => {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session?.user) {
-        const profile = await fetchProfile(session.user.id);
-        set({ user: profile, loading: false });
+        try {
+          const profile = await fetchProfile(session.user.id);
+          set({ user: profile, loading: false });
+        } catch {
+          set({ user: null, loading: false });
+        }
       } else {
         set({ user: null, loading: false });
       }
@@ -45,8 +54,12 @@ export const useAuthStore = create<AuthState>()((set) => ({
 
     supabase.auth.onAuthStateChange(async (_event, session) => {
       if (session?.user) {
-        const profile = await fetchProfile(session.user.id);
-        set({ user: profile, loading: false });
+        try {
+          const profile = await fetchProfile(session.user.id);
+          set({ user: profile, loading: false });
+        } catch {
+          set({ user: null, loading: false });
+        }
       } else {
         set({ user: null, loading: false });
       }
