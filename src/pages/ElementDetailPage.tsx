@@ -2,6 +2,14 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { ArrowLeft, Hash, ToggleLeft, Ruler, ExternalLink, Database } from 'lucide-react';
 import { fetchElementById } from '../api/radelement';
+
+/** Returns the date string only if it represents a real date (year ≥ 1900). */
+function validDate(d?: string): string | null {
+  if (!d) return null;
+  const year = parseInt(d.split('-')[0], 10);
+  if (!year || year < 1900) return null;
+  return d.split('T')[0];
+}
 import { CDEElement, getElementType } from '../types/cde';
 import { StatusBadge } from '../components/cde/StatusBadge';
 import { Button } from '../components/ui/Button';
@@ -197,10 +205,12 @@ export function ElementDetailPage() {
               <p className="text-xs text-slate-500">Version</p>
               <p className="font-semibold text-slate-900 dark:text-white">{element.element_version.number}</p>
             </div>
-            <div>
-              <p className="text-xs text-slate-500">Date</p>
-              <p className="font-semibold text-slate-900 dark:text-white">{element.element_version.date?.split('T')[0]}</p>
-            </div>
+            {validDate(element.element_version.date) && (
+              <div>
+                <p className="text-xs text-slate-500">Date</p>
+                <p className="font-semibold text-slate-900 dark:text-white">{validDate(element.element_version.date)}</p>
+              </div>
+            )}
             {element.schema_version && (
               <div>
                 <p className="text-xs text-slate-500">Schema</p>

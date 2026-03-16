@@ -5,6 +5,14 @@ import {
   ExternalLink, User, Building2, Calendar, Hash, Globe, Plus, CheckCircle
 } from 'lucide-react';
 import { fetchSetById } from '../api/radelement';
+
+/** Returns the date string only if it represents a real date (year ≥ 1900). */
+function validDate(d?: string): string | null {
+  if (!d) return null;
+  const year = parseInt(d.split('-')[0], 10);
+  if (!year || year < 1900) return null;
+  return d.split('T')[0];
+}
 import { CDESet, CDEElement, getStatusName, getElementType } from '../types/cde';
 import { StatusBadge } from '../components/cde/StatusBadge';
 import { Button } from '../components/ui/Button';
@@ -354,7 +362,10 @@ export function SetDetailPage() {
         <div className="mt-5 pt-5 border-t border-slate-100 dark:border-slate-700 flex gap-6 text-sm text-slate-600 dark:text-slate-400 flex-wrap">
           <span><strong className="text-slate-900 dark:text-white">{set.elements.length}</strong> elements</span>
           {set.set_version && (
-            <span><strong className="text-slate-900 dark:text-white">v{set.set_version.number}</strong> ({set.set_version.date?.split('T')[0]})</span>
+            <span>
+              <strong className="text-slate-900 dark:text-white">v{set.set_version.number}</strong>
+              {validDate(set.set_version.date) && ` (${validDate(set.set_version.date)})`}
+            </span>
           )}
           {set.schema_version && <span>Schema {set.schema_version}</span>}
           {bodyParts.length > 0 && <span>{bodyParts.map(b => b.name).join(', ')}</span>}
