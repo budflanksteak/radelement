@@ -1,9 +1,11 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 import { CDESet, CDEElement, Draft } from '../types/cde';
+import { supabase } from '../lib/supabase';
 
 interface DraftsState {
   drafts: Draft[];
+  loading: boolean;
+  loadDrafts: (userId: string, role: string) => Promise<void>;
   createDraft: (authorId: string, authorName: string, base?: Partial<CDESet>) => Draft;
   updateDraft: (id: string, set: CDESet) => void;
   deleteDraft: (id: string) => void;
@@ -21,120 +23,195 @@ function newTBDId(prefix: 'RDES' | 'RDE'): string {
   return `${prefix}TO_BE_DETERMINED${n}`;
 }
 
-function now(): string {
+function nowStr(): string {
   return new Date().toISOString();
 }
 
-const DEFAULT_SET: CDESet = {
-  id: newTBDId('RDES'),
-  name: '',
-  description: '',
-  schema_version: '1.0.0',
-  set_version: { number: 1, date: new Date().toISOString().split('T')[0] },
-  status: { name: 'Proposed', date: new Date().toISOString().split('T')[0] },
-  index_codes: [],
-  body_parts: [],
-  contributors: { people: [], organizations: [] },
-  history: [{ date: new Date().toISOString().split('T')[0], status: 'Proposed' }],
-  specialties: [],
-  modalities: [],
-  elements: [],
-};
+function makeDefaultSet(): CDESet {
+  return {
+    id: newTBDId('RDES'),
+    name: '',
+    description: '',
+    schema_version: '1.0.0',
+    set_version: { number: 1, date: new Date().toISOString().split('T')[0] },
+    status: { name: 'Proposed', date: new Date().toISOString().split('T')[0] },
+    index_codes: [],
+    body_parts: [],
+    contributors: { people: [], organizations: [] },
+    history: [{ date: new Date().toISOString().split('T')[0], status: 'Proposed' }],
+    specialties: [],
+    modalities: [],
+    elements: [],
+  };
+}
 
-export const useDraftsStore = create<DraftsState>()(
-  persist(
-    (set, get) => ({
-      drafts: [],
+function rowToDraft(row: Record<string, unknown>): Draft {
+  return {
+    id: row.id as string,
+    authorId: row.author_id as string,
+    authorName: (row.author_name as string) ?? '',
+    set: (row.set_data as CDESet) ?? makeDefaultSet(),
+    submittedForReview: (row.submitted_for_review as boolean) ?? false,
+    createdAt: row.created_at as string,
+    updatedAt: row.updated_at as string,
+    reviewComments: [],
+  };
+}
 
-      createDraft: (authorId, authorName, base = {}) => {
-        const draft: Draft = {
-          id: `draft-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-          set: { ...DEFAULT_SET, id: newTBDId('RDES'), ...base } as CDESet,
-          createdAt: now(),
-          updatedAt: now(),
-          authorId,
-          authorName,
-          submittedForReview: false,
-          reviewComments: [],
-        };
-        set(state => {
-          // Guard against duplicate IDs that can arise from localStorage corruption
-          const existing = state.drafts.some(d => d.id === draft.id);
-          return { drafts: existing ? state.drafts : [...state.drafts, draft] };
-        });
-        return draft;
-      },
+export const useDraftsStore = create<DraftsState>()((set, get) => ({
+  drafts: [],
+  loading: false,
 
-      updateDraft: (id, updatedSet) => {
-        set(state => ({
-          drafts: state.drafts.map(d =>
-            d.id === id ? { ...d, set: updatedSet, updatedAt: now() } : d
-          )
-        }));
-      },
+  loadDrafts: async (userId, role) => {
+    set({ loading: true });
+    try {
+      let query = supabase.from('drafts').select('*');
+      if (role === 'admin') {
+        // admin sees all
+      } else if (role === 'reviewer') {
+        query = query.or(`author_id.eq.${userId},submitted_for_review.eq.true`);
+      } else {
+        query = query.eq('author_id', userId);
+      }
+      const { data, error } = await query.order('updated_at', { ascending: false });
+      if (error) throw error;
+      set({ drafts: (data ?? []).map(rowToDraft), loading: false });
+    } catch {
+      set({ loading: false });
+    }
+  },
 
-      deleteDraft: (id) => {
-        set(state => ({ drafts: state.drafts.filter(d => d.id !== id) }));
-      },
+  createDraft: (authorId, authorName, base = {}) => {
+    const draft: Draft = {
+      id: crypto.randomUUID(),
+      set: { ...makeDefaultSet(), ...base } as CDESet,
+      createdAt: nowStr(),
+      updatedAt: nowStr(),
+      authorId,
+      authorName,
+      submittedForReview: false,
+      reviewComments: [],
+    };
+    // Optimistic local update
+    set(state => ({ drafts: [draft, ...state.drafts] }));
+    // Background Supabase insert
+    supabase.from('drafts').insert({
+      id: draft.id,
+      author_id: authorId,
+      author_name: authorName,
+      name: draft.set.name || 'Untitled',
+      set_data: draft.set,
+      submitted_for_review: false,
+    }).then(({ error }) => {
+      if (error) console.error('Failed to persist draft:', error.message);
+    });
+    return draft;
+  },
 
-      submitForReview: (id) => {
-        set(state => ({
-          drafts: state.drafts.map(d =>
-            d.id === id ? { ...d, submittedForReview: true, updatedAt: now() } : d
-          )
-        }));
-      },
+  updateDraft: (id, updatedSet) => {
+    const ts = nowStr();
+    set(state => ({
+      drafts: state.drafts.map(d =>
+        d.id === id ? { ...d, set: updatedSet, updatedAt: ts } : d
+      ),
+    }));
+    supabase.from('drafts').update({
+      set_data: updatedSet,
+      name: updatedSet.name || 'Untitled',
+      updated_at: ts,
+    }).eq('id', id).then(({ error }) => {
+      if (error) console.error('Failed to update draft:', error.message);
+    });
+  },
 
-      retractFromReview: (id) => {
-        set(state => ({
-          drafts: state.drafts.map(d =>
-            d.id === id ? { ...d, submittedForReview: false, updatedAt: now() } : d
-          )
-        }));
-      },
+  deleteDraft: (id) => {
+    set(state => ({ drafts: state.drafts.filter(d => d.id !== id) }));
+    supabase.from('drafts').delete().eq('id', id).then(({ error }) => {
+      if (error) console.error('Failed to delete draft:', error.message);
+    });
+  },
 
-      getDraft: (id) => get().drafts.find(d => d.id === id),
+  submitForReview: (id) => {
+    const ts = nowStr();
+    set(state => ({
+      drafts: state.drafts.map(d =>
+        d.id === id ? { ...d, submittedForReview: true, updatedAt: ts } : d
+      ),
+    }));
+    supabase.from('drafts').update({ submitted_for_review: true, updated_at: ts })
+      .eq('id', id).then(({ error }) => {
+        if (error) console.error('Failed to submit for review:', error.message);
+      });
+  },
 
-      getMyDrafts: (authorId) => {
-        const seen = new Set<string>();
-        return get().drafts.filter(d => {
-          if (d.authorId !== authorId) return false;
-          if (seen.has(d.id)) return false;
-          seen.add(d.id);
-          return true;
-        });
-      },
+  retractFromReview: (id) => {
+    const ts = nowStr();
+    set(state => ({
+      drafts: state.drafts.map(d =>
+        d.id === id ? { ...d, submittedForReview: false, updatedAt: ts } : d
+      ),
+    }));
+    supabase.from('drafts').update({ submitted_for_review: false, updated_at: ts })
+      .eq('id', id).then(({ error }) => {
+        if (error) console.error('Failed to retract draft:', error.message);
+      });
+  },
 
-      addElement: (draftId, element) => {
-        set(state => ({
-          drafts: state.drafts.map(d => {
-            if (d.id !== draftId) return d;
-            const el = { ...element, id: element.id || newTBDId('RDE') };
-            return { ...d, set: { ...d.set, elements: [...d.set.elements, el] }, updatedAt: now() };
-          })
-        }));
-      },
+  getDraft: (id) => get().drafts.find(d => d.id === id),
 
-      updateElement: (draftId, elementId, element) => {
-        set(state => ({
-          drafts: state.drafts.map(d => {
-            if (d.id !== draftId) return d;
-            const elements = d.set.elements.map(e => e.id === elementId ? element : e);
-            return { ...d, set: { ...d.set, elements }, updatedAt: now() };
-          })
-        }));
-      },
+  getMyDrafts: (authorId) => {
+    const seen = new Set<string>();
+    return get().drafts.filter(d => {
+      if (d.authorId !== authorId) return false;
+      if (seen.has(d.id)) return false;
+      seen.add(d.id);
+      return true;
+    });
+  },
 
-      removeElement: (draftId, elementId) => {
-        set(state => ({
-          drafts: state.drafts.map(d => {
-            if (d.id !== draftId) return d;
-            const elements = d.set.elements.filter(e => e.id !== elementId);
-            return { ...d, set: { ...d.set, elements }, updatedAt: now() };
-          })
-        }));
-      },
-    }),
-    { name: 'radelement-drafts' }
-  )
-);
+  addElement: (draftId, element) => {
+    const el = { ...element, id: element.id || newTBDId('RDE') };
+    set(state => ({
+      drafts: state.drafts.map(d => {
+        if (d.id !== draftId) return d;
+        const updatedSet = { ...d.set, elements: [...d.set.elements, el] };
+        // Persist
+        supabase.from('drafts').update({ set_data: updatedSet, updated_at: nowStr() })
+          .eq('id', draftId).then(({ error }) => {
+            if (error) console.error('Failed to add element:', error.message);
+          });
+        return { ...d, set: updatedSet, updatedAt: nowStr() };
+      }),
+    }));
+  },
+
+  updateElement: (draftId, elementId, element) => {
+    set(state => ({
+      drafts: state.drafts.map(d => {
+        if (d.id !== draftId) return d;
+        const elements = d.set.elements.map(e => e.id === elementId ? element : e);
+        const updatedSet = { ...d.set, elements };
+        supabase.from('drafts').update({ set_data: updatedSet, updated_at: nowStr() })
+          .eq('id', draftId).then(({ error }) => {
+            if (error) console.error('Failed to update element:', error.message);
+          });
+        return { ...d, set: updatedSet, updatedAt: nowStr() };
+      }),
+    }));
+  },
+
+  removeElement: (draftId, elementId) => {
+    set(state => ({
+      drafts: state.drafts.map(d => {
+        if (d.id !== draftId) return d;
+        const elements = d.set.elements.filter(e => e.id !== elementId);
+        const updatedSet = { ...d.set, elements };
+        supabase.from('drafts').update({ set_data: updatedSet, updated_at: nowStr() })
+          .eq('id', draftId).then(({ error }) => {
+            if (error) console.error('Failed to remove element:', error.message);
+          });
+        return { ...d, set: updatedSet, updatedAt: nowStr() };
+      }),
+    }));
+  },
+}));

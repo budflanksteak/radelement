@@ -1,7 +1,7 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Database, Layers, FileEdit, BookOpen,
-  MessageSquare, X, Plus, User, Settings, ChevronRight
+  MessageSquare, X, Plus, User, ShieldCheck, ChevronRight
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { useAuthStore } from '../../store/authStore';
@@ -29,6 +29,7 @@ const NAV_ITEMS: NavItem[] = [
 const AUTH_ITEMS: NavItem[] = [
   { to: '/drafts', icon: <FileEdit size={18} />, label: 'My Drafts', requiresRole: ['author', 'admin'] },
   { to: '/review', icon: <MessageSquare size={18} />, label: 'Review Queue', requiresRole: ['reviewer', 'admin'] },
+  { to: '/admin', icon: <ShieldCheck size={18} />, label: 'Admin Panel', requiresRole: ['admin'] },
 ];
 
 const RESOURCE_ITEMS = [

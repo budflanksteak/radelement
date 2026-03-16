@@ -18,11 +18,15 @@ export function ProfilePage() {
     );
   }
 
-  function handleSave(e: React.FormEvent) {
+  async function handleSave(e: React.FormEvent) {
     e.preventDefault();
-    updateProfile({ name, orcid_id: orcid, organization });
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2500);
+    try {
+      await updateProfile({ name, orcid_id: orcid, organization });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2500);
+    } catch {
+      // silent — user still sees the local update
+    }
   }
 
   const ROLE_LABELS: Record<string, string> = {

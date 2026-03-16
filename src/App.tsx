@@ -12,7 +12,11 @@ import { DraftsPage } from './pages/DraftsPage';
 import { ReviewPage } from './pages/ReviewPage';
 import { AboutPage } from './pages/AboutPage';
 import { ProfilePage } from './pages/ProfilePage';
+import { AdminPage } from './pages/AdminPage';
 import { useThemeStore } from './store/themeStore';
+import { useAuthStore } from './store/authStore';
+import { useDraftsStore } from './store/draftsStore';
+import { useReviewStore } from './store/reviewStore';
 
 function ThemeInit() {
   const { dark } = useThemeStore();
@@ -23,10 +27,33 @@ function ThemeInit() {
   return null;
 }
 
+/** Initialises auth on mount, then loads data whenever the logged-in user changes. */
+function DataLoader() {
+  const { initialize, user } = useAuthStore();
+  const { loadDrafts } = useDraftsStore();
+  const { loadAllComments } = useReviewStore();
+
+  // Initialise Supabase auth session once
+  useEffect(() => {
+    initialize();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Reload data whenever user changes (login / logout)
+  useEffect(() => {
+    if (user) {
+      loadDrafts(user.id, user.role);
+      loadAllComments();
+    }
+  }, [user?.id, user?.role]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  return null;
+}
+
 export function App() {
   return (
     <BrowserRouter>
       <ThemeInit />
+      <DataLoader />
       <Routes>
         <Route element={<Layout />}>
           <Route path="/" element={<HomePage />} />
@@ -39,6 +66,7 @@ export function App() {
           <Route path="/review" element={<ReviewPage />} />
           <Route path="/about" element={<AboutPage />} />
           <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/admin" element={<AdminPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="*" element={
             <div className="flex flex-col items-center justify-center min-h-[50vh] text-center">
