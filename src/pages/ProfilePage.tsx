@@ -8,6 +8,8 @@ export function ProfilePage() {
   const [orcid, setOrcid] = useState(user?.orcid_id ?? '');
   const [organization, setOrganization] = useState(user?.organization ?? '');
   const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   if (!user) {
     return (
@@ -20,12 +22,16 @@ export function ProfilePage() {
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
+    setSaving(true);
+    setSaveError(null);
     try {
       await updateProfile({ name, orcid_id: orcid, organization });
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
-    } catch {
-      // silent — user still sees the local update
+    } catch (err: unknown) {
+      setSaveError(err instanceof Error ? err.message : 'Failed to save — please try again.');
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -107,14 +113,20 @@ export function ProfilePage() {
             </div>
           </div>
         </div>
+        {saveError && (
+          <div className="px-6 py-3 border-t border-red-100 dark:border-red-900/30 bg-red-50 dark:bg-red-900/20">
+            <p className="text-sm text-red-600 dark:text-red-400">{saveError}</p>
+          </div>
+        )}
         <div className="px-6 py-4 flex items-center justify-between">
           {saved && <p className="text-sm text-teal-600 dark:text-teal-400 font-medium">Saved successfully.</p>}
           {!saved && <span />}
           <button
             type="submit"
-            className="inline-flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 transition-colors"
+            disabled={saving}
+            className="inline-flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            <Save size={15} /> Save Changes
+            <Save size={15} /> {saving ? 'Saving…' : 'Save Changes'}
           </button>
         </div>
       </form>
