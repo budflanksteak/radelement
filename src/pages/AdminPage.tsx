@@ -12,7 +12,7 @@ interface Profile {
   role: UserRole;
   organization?: string;
   created_at: string;
-  is_active: boolean;
+  is_active: boolean | null; // null before migration = treat as true
 }
 
 interface DraftRow {
@@ -116,15 +116,17 @@ export function AdminPage() {
     setRoleUpdating(null);
   }
 
-  async function handleToggleActive(profileId: string, currentlyActive: boolean) {
+  async function handleToggleActive(profileId: string, currentlyActive: boolean | null) {
+    // null means column doesn't exist yet or is true — treat as active
+    const isCurrentlyActive = currentlyActive !== false;
     setActiveToggling(profileId);
     const { error } = await supabase
       .from('profiles')
-      .update({ is_active: !currentlyActive })
+      .update({ is_active: !isCurrentlyActive })
       .eq('id', profileId);
     if (!error) {
       setProfiles(prev =>
-        prev.map(p => p.id === profileId ? { ...p, is_active: !currentlyActive } : p)
+        prev.map(p => p.id === profileId ? { ...p, is_active: !isCurrentlyActive } : p)
       );
     } else {
       console.error('Failed to toggle active state:', error.message);
@@ -210,11 +212,11 @@ export function AdminPage() {
                 {profiles.map(profile => (
                   <tr key={profile.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
                     <td className="px-4 py-3 font-medium text-slate-900 dark:text-white">
-                      <span className={profile.is_active ? '' : 'line-through text-slate-400'}>
+                      <span className={profile.is_active === false ? 'line-through text-slate-400' : ''}>
                         {profile.name || <span className="text-slate-400 italic">—</span>}
                       </span>
-                      {!profile.is_active && (
-                        <span className="ml-2 text-xs text-red-500 font-normal not-italic no-underline" style={{textDecoration:'none'}}>deactivated</span>
+                      {profile.is_active === false && (
+                        <span className="ml-2 text-xs text-red-500 font-normal not-italic" style={{textDecoration:'none'}}>deactivated</span>
                       )}
                     </td>
                     <td className="px-4 py-3 text-slate-500 dark:text-slate-400">{profile.email}</td>
@@ -252,14 +254,14 @@ export function AdminPage() {
                         <button
                           onClick={() => handleToggleActive(profile.id, profile.is_active)}
                           disabled={activeToggling === profile.id}
-                          title={profile.is_active ? 'Deactivate account' : 'Reactivate account'}
+                          title={profile.is_active !== false ? 'Deactivate account' : 'Reactivate account'}
                           className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-medium transition-colors disabled:opacity-50 ${
-                            profile.is_active
+                            profile.is_active !== false
                               ? 'bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/40'
                               : 'bg-teal-50 text-teal-600 hover:bg-teal-100 dark:bg-teal-900/20 dark:text-teal-400 dark:hover:bg-teal-900/40'
                           }`}
                         >
-                          {profile.is_active
+                          {profile.is_active !== false
                             ? <><UserX size={12} /> Deactivate</>
                             : <><UserCheck size={12} /> Reactivate</>
                           }
