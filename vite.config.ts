@@ -14,11 +14,11 @@ export default defineConfig({
         secure: true,
         rewrite: (path: string) => path.replace(/^\/api\/radelement/, '/radelement'),
       },
-      '/api/snomed': {
+      '/api/snomed/descriptions': {
         target: 'https://browser.ihtsdotools.org',
         changeOrigin: true,
         secure: true,
-        rewrite: (path: string) => path.replace(/^\/api\/snomed/, '/snowstorm/snomed-ct'),
+        rewrite: () => '/snowstorm/snomed-ct/browser/MAIN/descriptions',
       },
       // NCBO BioPortal — full RadLex ontology search (requires free API key in .env)
       '/api/bioportal': {

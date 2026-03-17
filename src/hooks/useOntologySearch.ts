@@ -142,7 +142,7 @@ async function searchSnomed(query: string): Promise<OntologyTerm[]> {
     limit: '12',
   });
 
-  const res = await fetch(`/api/snomed/browser/MAIN/descriptions?${params}`, {
+  const res = await fetch(`/api/snomed/descriptions?${params}`, {
     headers: { 'Accept-Language': 'en-US,en' },
   });
 
