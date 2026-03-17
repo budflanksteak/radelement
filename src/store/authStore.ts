@@ -39,27 +39,16 @@ export const useAuthStore = create<AuthState>()((set) => ({
   loading: true,
 
   initialize: () => {
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
+    // IMPORTANT: do NOT make this callback async.
+    // Supabase JS v2 awaits async onAuthStateChange callbacks before
+    // signInWithPassword returns — making login hang until the DB query
+    // finishes. Using .then() fires the fetch detached so login resolves
+    // immediately after auth succeeds.
+    supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
-        try {
-          const profile = await fetchProfile(session.user.id);
-          set({ user: profile, loading: false });
-        } catch {
-          set({ user: null, loading: false });
-        }
-      } else {
-        set({ user: null, loading: false });
-      }
-    });
-
-    supabase.auth.onAuthStateChange(async (_event, session) => {
-      if (session?.user) {
-        try {
-          const profile = await fetchProfile(session.user.id);
-          set({ user: profile, loading: false });
-        } catch {
-          set({ user: null, loading: false });
-        }
+        fetchProfile(session.user.id)
+          .then(profile => set({ user: profile, loading: false }))
+          .catch(() => set({ user: null, loading: false }));
       } else {
         set({ user: null, loading: false });
       }
