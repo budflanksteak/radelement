@@ -5,6 +5,7 @@ import {
   ExternalLink, User, Building2, Calendar, Hash, Globe, Plus, CheckCircle
 } from 'lucide-react';
 import { fetchSetById } from '../api/radelement';
+import { downloadPowerscribeRtf } from '../utils/powerscribeRtf';
 
 /** Returns the date string only if it represents a real date (year ≥ 1995).
  *  The CDE effort did not exist before 1995; earlier values are API placeholders. */
@@ -358,6 +359,14 @@ export function SetDetailPage() {
           <div className="flex flex-col gap-2 shrink-0">
             <Button onClick={handleDownload} variant="outline" size="sm">
               <Download size={14} /> Download JSON
+            </Button>
+            <Button
+              onClick={() => downloadPowerscribeRtf(set)}
+              variant="outline"
+              size="sm"
+              title="Download as Powerscribe autotext template (.rtf)"
+            >
+              <Download size={14} /> Powerscribe RTF
             </Button>
             {user && (user.role === 'author' || user.role === 'admin') && (
               <Button onClick={handleForkAsNew} size="sm">
