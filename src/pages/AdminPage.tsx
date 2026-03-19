@@ -12,7 +12,9 @@ interface Profile {
   role: UserRole;
   organization?: string;
   created_at: string;
-  is_active: boolean | null; // null before migration = treat as true
+  is_active: boolean | null;     // null before migration = treat as true
+  last_login_at: string | null;  // null = never logged in since tracking began
+  login_count: number | null;    // null before migration = treat as 0
 }
 
 interface DraftRow {
@@ -35,12 +37,13 @@ interface CommentRow {
   created_at: string;
 }
 
-const ROLE_OPTIONS: UserRole[] = ['viewer', 'author', 'reviewer', 'admin'];
+const ROLE_OPTIONS: UserRole[] = ['viewer', 'author', 'editor', 'reviewer', 'admin'];
 const ROLE_COLORS: Record<UserRole, string> = {
-  viewer: 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300',
-  author: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
+  viewer:   'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300',
+  author:   'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
+  editor:   'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300',
   reviewer: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300',
-  admin: 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300',
+  admin:    'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300',
 };
 
 export function AdminPage() {
@@ -201,7 +204,7 @@ export function AdminPage() {
             <table className="w-full text-sm">
               <thead className="bg-slate-50 dark:bg-slate-700/50">
                 <tr>
-                  {['Name', 'Email', 'Organization', 'Role', 'Joined', ''].map(h => (
+                  {['Name', 'Email', 'Organization', 'Role', 'Joined', 'Last Login', 'Logins', ''].map(h => (
                     <th key={h} className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                       {h}
                     </th>
@@ -248,6 +251,14 @@ export function AdminPage() {
                     </td>
                     <td className="px-4 py-3 text-slate-400 text-xs">
                       {new Date(profile.created_at).toLocaleDateString()}
+                    </td>
+                    <td className="px-4 py-3 text-slate-400 text-xs whitespace-nowrap">
+                      {profile.last_login_at
+                        ? new Date(profile.last_login_at).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' })
+                        : <span className="italic text-slate-300 dark:text-slate-600">Never</span>}
+                    </td>
+                    <td className="px-4 py-3 text-slate-500 dark:text-slate-400 text-xs text-center">
+                      {profile.login_count ?? 0}
                     </td>
                     <td className="px-4 py-3">
                       {profile.id !== user.id && (

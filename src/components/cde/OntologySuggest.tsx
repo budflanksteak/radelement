@@ -62,10 +62,10 @@ export function OntologySuggest({
   }, [visible, onClose]);
 
   if (!visible || query.trim().length < 2) return null;
-  if (!loading && results.length === 0) return null;
 
   const radlex = results.filter(r => r.system === 'RADLEX');
   const snomed = results.filter(r => r.system === 'SNOMEDCT');
+  const hasResults = radlex.length > 0 || snomed.length > 0;
 
   return (
     <div
@@ -94,6 +94,17 @@ export function OntologySuggest({
 
       {/* Results */}
       <div className="max-h-60 overflow-y-auto">
+        {loading && !hasResults && (
+          <div className="flex items-center gap-2 px-3 py-3 text-xs text-slate-400">
+            <Loader2 size={12} className="animate-spin" />
+            Searching RadLex and SNOMED CT…
+          </div>
+        )}
+        {!loading && !hasResults && (
+          <div className="px-3 py-3 text-xs text-slate-400 italic">
+            No ontology matches found for "{query}"
+          </div>
+        )}
         {radlex.length > 0 && (
           <TermGroup label="RadLex" terms={radlex} onSelect={onSelect} />
         )}
@@ -103,11 +114,13 @@ export function OntologySuggest({
       </div>
 
       {/* Footer hint */}
-      <div className="rounded-b-xl border-t border-slate-100 bg-slate-50 px-3 py-1.5 dark:border-slate-700 dark:bg-slate-700/30">
-        <p className="text-xs text-slate-400">
-          Selecting a term adds its ontology code to this element's index codes
-        </p>
-      </div>
+      {hasResults && (
+        <div className="rounded-b-xl border-t border-slate-100 bg-slate-50 px-3 py-1.5 dark:border-slate-700 dark:bg-slate-700/30">
+          <p className="text-xs text-slate-400">
+            Selecting a term adds its ontology code to this element's index codes
+          </p>
+        </div>
+      )}
     </div>
   );
 }

@@ -66,8 +66,8 @@ export const useDraftsStore = create<DraftsState>()((set, get) => ({
     set({ loading: true });
     try {
       let query = supabase.from('drafts').select('*');
-      if (role === 'admin') {
-        // admin sees all
+      if (role === 'admin' || role === 'editor') {
+        // admin and editor see all drafts
       } else if (role === 'reviewer') {
         query = query.or(`author_id.eq.${userId},submitted_for_review.eq.true`);
       } else {

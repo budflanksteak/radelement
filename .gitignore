@@ -26,3 +26,7 @@ docs/capture-screenshots.mjs
 docs/inspect.mjs
 playwright-report/
 test-results/
+
+# Manual generation
+generate_manual.py
+RadElement_User_Manual.pdf

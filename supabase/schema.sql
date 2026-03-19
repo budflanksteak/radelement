@@ -7,14 +7,17 @@
 
 -- profiles: extends auth.users with role and CDE-specific fields
 create table if not exists public.profiles (
-  id            uuid primary key references auth.users on delete cascade,
-  email         text,
-  name          text not null default '',
-  role          text not null default 'viewer'
-                  check (role in ('viewer','author','reviewer','admin')),
-  organization  text,
-  orcid_id      text,
-  created_at    timestamptz not null default now()
+  id             uuid primary key references auth.users on delete cascade,
+  email          text,
+  name           text not null default '',
+  role           text not null default 'viewer'
+                   check (role in ('viewer','author','editor','reviewer','admin')),
+  organization   text,
+  orcid_id       text,
+  is_active      boolean not null default true,
+  last_login_at  timestamptz,
+  login_count    integer not null default 0,
+  created_at     timestamptz not null default now()
 );
 
 -- drafts: CDE set drafts (set_data stores the full CDESet as JSON)
@@ -82,6 +85,22 @@ as $$
   select role from public.profiles where id = auth.uid()
 $$;
 
+-- ── HELPER: atomically record a successful login ──────────────────
+
+create or replace function public.increment_login_stats(uid uuid)
+returns void
+language plpgsql
+security definer
+as $$
+begin
+  update public.profiles
+  set
+    last_login_at = now(),
+    login_count   = coalesce(login_count, 0) + 1
+  where id = uid;
+end;
+$$;
+
 -- ── ROW LEVEL SECURITY ───────────────────────────────────────────
 
 alter table public.profiles enable row level security;
@@ -120,25 +139,25 @@ create policy "drafts_select" on public.drafts
   for select using (
     author_id = auth.uid()
     or (submitted_for_review = true and public.my_role() in ('reviewer', 'admin'))
-    or public.my_role() = 'admin'
+    or public.my_role() in ('editor', 'admin')
   );
 
 create policy "drafts_insert" on public.drafts
   for insert with check (
     author_id = auth.uid()
-    and public.my_role() in ('author', 'admin')
+    and public.my_role() in ('author', 'editor', 'admin')
   );
 
 create policy "drafts_update" on public.drafts
   for update using (
     author_id = auth.uid()
-    or public.my_role() = 'admin'
+    or public.my_role() in ('editor', 'admin')
   );
 
 create policy "drafts_delete" on public.drafts
   for delete using (
     author_id = auth.uid()
-    or public.my_role() = 'admin'
+    or public.my_role() in ('editor', 'admin')
   );
 
 -- COMMENTS policies
@@ -159,6 +178,29 @@ create policy "comments_delete" on public.comments
     user_id = auth.uid()
     or public.my_role() = 'admin'
   );
+
+-- ================================================================
+-- MIGRATION — run this block if you have an existing database
+-- (safe to run even on a fresh schema — all statements are idempotent)
+-- ================================================================
+
+-- Add new columns to profiles (IF NOT EXISTS guards against re-runs)
+alter table public.profiles
+  add column if not exists is_active     boolean not null default true;
+
+alter table public.profiles
+  add column if not exists last_login_at timestamptz;
+
+alter table public.profiles
+  add column if not exists login_count   integer not null default 0;
+
+-- Update role constraint to include 'editor'
+alter table public.profiles
+  drop constraint if exists profiles_role_check;
+
+alter table public.profiles
+  add constraint profiles_role_check
+    check (role in ('viewer','author','editor','reviewer','admin'));
 
 -- ================================================================
 -- DEMO USERS — run AFTER creating users in Supabase Auth dashboard

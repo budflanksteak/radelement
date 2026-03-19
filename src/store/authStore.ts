@@ -44,8 +44,13 @@ export const useAuthStore = create<AuthState>()((set) => ({
     // signInWithPassword returns — making login hang until the DB query
     // finishes. Using .then() fires the fetch detached so login resolves
     // immediately after auth succeeds.
-    supabase.auth.onAuthStateChange((_event, session) => {
+    supabase.auth.onAuthStateChange((event, session) => {
       if (session?.user) {
+        // On fresh sign-in, update last_login_at and increment login_count
+        if (event === 'SIGNED_IN') {
+          supabase.rpc('increment_login_stats', { uid: session.user.id })
+            .then(() => {/* best-effort — ignore errors */});
+        }
         fetchProfile(session.user.id)
           .then(profile => set({ user: profile, loading: false }))
           .catch(() => set({ user: null, loading: false }));

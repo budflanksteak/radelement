@@ -27,7 +27,7 @@ const NAV_ITEMS: NavItem[] = [
 ];
 
 const AUTH_ITEMS: NavItem[] = [
-  { to: '/drafts', icon: <FileEdit size={18} />, label: 'My Drafts', requiresRole: ['author', 'admin'] },
+  { to: '/drafts', icon: <FileEdit size={18} />, label: 'My Drafts', requiresRole: ['author', 'editor', 'reviewer', 'admin'] },
   { to: '/review', icon: <MessageSquare size={18} />, label: 'Review Queue', requiresRole: ['reviewer', 'admin'] },
   { to: '/admin', icon: <ShieldCheck size={18} />, label: 'Admin Panel', requiresRole: ['admin'] },
 ];
@@ -108,7 +108,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
               {filteredAuthItems.map(item => (
                 <NavItem key={item.to} item={item} onClick={() => onClose()} />
               ))}
-              {(user.role === 'author' || user.role === 'admin') && (
+              {(['author', 'editor', 'admin'] as string[]).includes(user.role) && (
                 <button
                   onClick={() => { navigate('/editor/new'); onClose(); }}
                   className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-brand-600 hover:bg-brand-50 dark:text-brand-400 dark:hover:bg-brand-900/20 transition-colors"

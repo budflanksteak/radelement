@@ -185,7 +185,7 @@ export function getStatusName(status: StatusWithDate | CDEStatus | string): CDES
   return status as CDEStatus;
 }
 
-export type UserRole = 'viewer' | 'author' | 'reviewer' | 'admin';
+export type UserRole = 'viewer' | 'author' | 'editor' | 'reviewer' | 'admin';
 
 export interface User {
   id: string;
