@@ -217,5 +217,6 @@ export interface Draft {
   authorId: string;
   authorName: string;
   submittedForReview?: boolean;
+  promoted?: boolean;           // admin has promoted to Proposed status
   reviewComments?: Comment[];
 }

@@ -194,6 +194,10 @@ alter table public.profiles
 alter table public.profiles
   add column if not exists login_count   integer not null default 0;
 
+-- Add promoted column to drafts
+alter table public.drafts
+  add column if not exists promoted boolean not null default false;
+
 -- Update role constraint to include 'editor'
 alter table public.profiles
   drop constraint if exists profiles_role_check;

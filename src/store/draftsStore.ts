@@ -11,8 +11,10 @@ interface DraftsState {
   deleteDraft: (id: string) => void;
   submitForReview: (id: string) => void;
   retractFromReview: (id: string) => void;
+  promoteDraft: (id: string) => void;
   getDraft: (id: string) => Draft | undefined;
   getMyDrafts: (authorId: string) => Draft[];
+  getAllDrafts: () => Draft[];
   addElement: (draftId: string, element: CDEElement) => void;
   updateElement: (draftId: string, elementId: string, element: CDEElement) => void;
   removeElement: (draftId: string, elementId: string) => void;
@@ -52,6 +54,7 @@ function rowToDraft(row: Record<string, unknown>): Draft {
     authorName: (row.author_name as string) ?? '',
     set: (row.set_data as CDESet) ?? makeDefaultSet(),
     submittedForReview: (row.submitted_for_review as boolean) ?? false,
+    promoted: (row.promoted as boolean) ?? false,
     createdAt: row.created_at as string,
     updatedAt: row.updated_at as string,
     reviewComments: [],
@@ -90,6 +93,7 @@ export const useDraftsStore = create<DraftsState>()((set, get) => ({
       authorId,
       authorName,
       submittedForReview: false,
+      promoted: false,
       reviewComments: [],
     };
     // Optimistic local update
@@ -102,6 +106,7 @@ export const useDraftsStore = create<DraftsState>()((set, get) => ({
       name: draft.set.name || 'Untitled',
       set_data: draft.set,
       submitted_for_review: false,
+      promoted: false,
     }).then(({ error }) => {
       if (error) console.error('Failed to persist draft:', error.message);
     });
@@ -157,12 +162,34 @@ export const useDraftsStore = create<DraftsState>()((set, get) => ({
       });
   },
 
+  promoteDraft: (id) => {
+    const ts = nowStr();
+    set(state => ({
+      drafts: state.drafts.map(d =>
+        d.id === id ? { ...d, promoted: true, updatedAt: ts } : d
+      ),
+    }));
+    supabase.from('drafts').update({ promoted: true, updated_at: ts })
+      .eq('id', id).then(({ error }) => {
+        if (error) console.error('Failed to promote draft:', error.message);
+      });
+  },
+
   getDraft: (id) => get().drafts.find(d => d.id === id),
 
   getMyDrafts: (authorId) => {
     const seen = new Set<string>();
     return get().drafts.filter(d => {
       if (d.authorId !== authorId) return false;
+      if (seen.has(d.id)) return false;
+      seen.add(d.id);
+      return true;
+    });
+  },
+
+  getAllDrafts: () => {
+    const seen = new Set<string>();
+    return get().drafts.filter(d => {
       if (seen.has(d.id)) return false;
       seen.add(d.id);
       return true;

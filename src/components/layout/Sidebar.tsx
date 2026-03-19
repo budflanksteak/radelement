@@ -1,7 +1,7 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Database, Layers, FileEdit, BookOpen,
-  MessageSquare, X, Plus, User, ShieldCheck, ChevronRight
+  MessageSquare, X, Plus, User, ShieldCheck, ChevronRight, Users
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { useAuthStore } from '../../store/authStore';
@@ -26,10 +26,12 @@ const NAV_ITEMS: NavItem[] = [
   { to: '/elements', icon: <Layers size={18} />, label: 'Elements' },
 ];
 
+// Author/reviewer see only their own drafts; editor/admin see everything
 const AUTH_ITEMS: NavItem[] = [
-  { to: '/drafts', icon: <FileEdit size={18} />, label: 'My Drafts', requiresRole: ['author', 'editor', 'reviewer', 'admin'] },
+  { to: '/drafts', icon: <FileEdit size={18} />, label: 'My Drafts',  requiresRole: ['author', 'reviewer'] },
+  { to: '/drafts', icon: <Users size={18} />,    label: 'All Drafts', requiresRole: ['editor', 'admin'] },
   { to: '/review', icon: <MessageSquare size={18} />, label: 'Review Queue', requiresRole: ['reviewer', 'admin'] },
-  { to: '/admin', icon: <ShieldCheck size={18} />, label: 'Admin Panel', requiresRole: ['admin'] },
+  { to: '/admin',  icon: <ShieldCheck size={18} />,   label: 'Admin Panel',  requiresRole: ['admin'] },
 ];
 
 const RESOURCE_ITEMS = [
@@ -106,7 +108,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
                 Authoring
               </p>
               {filteredAuthItems.map(item => (
-                <NavItem key={item.to} item={item} onClick={() => onClose()} />
+                <NavItem key={`${item.to}-${item.label}`} item={item} onClick={() => onClose()} />
               ))}
               {(['author', 'editor', 'admin'] as string[]).includes(user.role) && (
                 <button
