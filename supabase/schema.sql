@@ -32,6 +32,24 @@ create table if not exists public.drafts (
   updated_at            timestamptz not null default now()
 );
 
+-- audit_log: immutable record of every significant user action
+create table if not exists public.audit_log (
+  id          uuid primary key default gen_random_uuid(),
+  user_id     uuid references public.profiles(id) on delete set null,
+  user_name   text not null default '',
+  user_role   text not null default '',
+  action      text not null,
+  entity_type text,
+  entity_id   text,
+  entity_name text,
+  details     jsonb,
+  created_at  timestamptz not null default now()
+);
+
+create index if not exists audit_log_created_at_idx on public.audit_log(created_at desc);
+create index if not exists audit_log_action_idx     on public.audit_log(action);
+create index if not exists audit_log_user_id_idx    on public.audit_log(user_id);
+
 -- comments: review comments on drafts (set_id links to set_data->>'id')
 create table if not exists public.comments (
   id          uuid primary key default gen_random_uuid(),
@@ -120,6 +138,8 @@ drop policy if exists "comments_select"         on public.comments;
 drop policy if exists "comments_insert"         on public.comments;
 drop policy if exists "comments_update"         on public.comments;
 drop policy if exists "comments_delete"         on public.comments;
+drop policy if exists "audit_log_select"        on public.audit_log;
+drop policy if exists "audit_log_insert"        on public.audit_log;
 
 -- PROFILES policies
 create policy "profiles_select" on public.profiles
@@ -179,6 +199,17 @@ create policy "comments_delete" on public.comments
     or public.my_role() = 'admin'
   );
 
+-- AUDIT_LOG policies
+alter table public.audit_log enable row level security;
+
+-- Only admins can read the audit log
+create policy "audit_log_select" on public.audit_log
+  for select using (public.my_role() = 'admin');
+
+-- Any authenticated user can insert (best-effort logging)
+create policy "audit_log_insert" on public.audit_log
+  for insert with check (auth.uid() is not null);
+
 -- ================================================================
 -- MIGRATION — run this block if you have an existing database
 -- (safe to run even on a fresh schema — all statements are idempotent)
@@ -205,6 +236,39 @@ alter table public.profiles
 alter table public.profiles
   add constraint profiles_role_check
     check (role in ('viewer','author','editor','reviewer','admin'));
+
+-- Add orcid_id to profiles (already in fresh schema; guard for existing DBs)
+alter table public.profiles
+  add column if not exists orcid_id text;
+
+-- Create audit_log table if not exists (already in fresh schema; guard for existing DBs)
+create table if not exists public.audit_log (
+  id          uuid primary key default gen_random_uuid(),
+  user_id     uuid references public.profiles(id) on delete set null,
+  user_name   text not null default '',
+  user_role   text not null default '',
+  action      text not null,
+  entity_type text,
+  entity_id   text,
+  entity_name text,
+  details     jsonb,
+  created_at  timestamptz not null default now()
+);
+
+create index if not exists audit_log_created_at_idx on public.audit_log(created_at desc);
+create index if not exists audit_log_action_idx     on public.audit_log(action);
+create index if not exists audit_log_user_id_idx    on public.audit_log(user_id);
+
+alter table public.audit_log enable row level security;
+
+drop policy if exists "audit_log_select" on public.audit_log;
+drop policy if exists "audit_log_insert" on public.audit_log;
+
+create policy "audit_log_select" on public.audit_log
+  for select using (public.my_role() = 'admin');
+
+create policy "audit_log_insert" on public.audit_log
+  for insert with check (auth.uid() is not null);
 
 -- ================================================================
 -- DEMO USERS — run AFTER creating users in Supabase Auth dashboard

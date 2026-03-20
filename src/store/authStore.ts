@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { User, UserRole } from '../types/cde';
 import { supabase } from '../lib/supabase';
+import { logAudit } from '../lib/auditLog';
 
 interface AuthState {
   user: User | null;
@@ -52,7 +53,17 @@ export const useAuthStore = create<AuthState>()((set) => ({
             .then(() => {/* best-effort — ignore errors */});
         }
         fetchProfile(session.user.id)
-          .then(profile => set({ user: profile, loading: false }))
+          .then(profile => {
+            set({ user: profile, loading: false });
+            if (event === 'SIGNED_IN' && profile) {
+              logAudit({
+                userId:   profile.id,
+                userName: profile.name,
+                userRole: profile.role,
+                action:   'user.login',
+              });
+            }
+          })
           .catch(() => set({ user: null, loading: false }));
       } else {
         set({ user: null, loading: false });

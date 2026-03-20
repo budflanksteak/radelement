@@ -1,6 +1,17 @@
 import { create } from 'zustand';
 import { CDESet, CDEElement, Draft } from '../types/cde';
 import { supabase } from '../lib/supabase';
+import { logAudit } from '../lib/auditLog';
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let _authStore: any = null;
+function getAuthUser() {
+  if (!_authStore) {
+    // Lazy to avoid circular dep at module load time
+    _authStore = require('./authStore');
+  }
+  return _authStore.useAuthStore.getState().user as import('../types/cde').User | null;
+}
 
 interface DraftsState {
   drafts: Draft[];
@@ -85,9 +96,22 @@ export const useDraftsStore = create<DraftsState>()((set, get) => ({
   },
 
   createDraft: (authorId, authorName, base = {}) => {
+    // Auto-populate author as a contributor (with ORCID if available)
+    const authUser = getAuthUser();
+    const defaultSet = makeDefaultSet();
+    const authorPerson = {
+      name: authorName,
+      role: 'Author',
+      ...(authUser?.orcid_id ? { orcid_id: authUser.orcid_id } : {}),
+    };
+    const mergedContributors = {
+      people: [authorPerson],
+      organizations: [],
+      ...(base.contributors ?? {}),
+    };
     const draft: Draft = {
       id: crypto.randomUUID(),
-      set: { ...makeDefaultSet(), ...base } as CDESet,
+      set: { ...defaultSet, ...base, contributors: mergedContributors } as CDESet,
       createdAt: nowStr(),
       updatedAt: nowStr(),
       authorId,
@@ -110,6 +134,11 @@ export const useDraftsStore = create<DraftsState>()((set, get) => ({
     }).then(({ error }) => {
       if (error) console.error('Failed to persist draft:', error.message);
     });
+    if (authUser) {
+      logAudit({ userId: authUser.id, userName: authUser.name, userRole: authUser.role,
+        action: 'draft.create', entityType: 'draft', entityId: draft.id,
+        entityName: draft.set.name || 'Untitled' });
+    }
     return draft;
   },
 
@@ -130,14 +159,20 @@ export const useDraftsStore = create<DraftsState>()((set, get) => ({
   },
 
   deleteDraft: (id) => {
+    const draft = get().drafts.find(d => d.id === id);
     set(state => ({ drafts: state.drafts.filter(d => d.id !== id) }));
     supabase.from('drafts').delete().eq('id', id).then(({ error }) => {
       if (error) console.error('Failed to delete draft:', error.message);
     });
+    const u = getAuthUser();
+    if (u) logAudit({ userId: u.id, userName: u.name, userRole: u.role,
+      action: 'draft.delete', entityType: 'draft', entityId: id,
+      entityName: draft?.set.name || 'Untitled' });
   },
 
   submitForReview: (id) => {
     const ts = nowStr();
+    const draft = get().drafts.find(d => d.id === id);
     set(state => ({
       drafts: state.drafts.map(d =>
         d.id === id ? { ...d, submittedForReview: true, updatedAt: ts } : d
@@ -147,10 +182,15 @@ export const useDraftsStore = create<DraftsState>()((set, get) => ({
       .eq('id', id).then(({ error }) => {
         if (error) console.error('Failed to submit for review:', error.message);
       });
+    const u = getAuthUser();
+    if (u) logAudit({ userId: u.id, userName: u.name, userRole: u.role,
+      action: 'draft.submit_review', entityType: 'draft', entityId: id,
+      entityName: draft?.set.name || 'Untitled' });
   },
 
   retractFromReview: (id) => {
     const ts = nowStr();
+    const draft = get().drafts.find(d => d.id === id);
     set(state => ({
       drafts: state.drafts.map(d =>
         d.id === id ? { ...d, submittedForReview: false, updatedAt: ts } : d
@@ -160,10 +200,15 @@ export const useDraftsStore = create<DraftsState>()((set, get) => ({
       .eq('id', id).then(({ error }) => {
         if (error) console.error('Failed to retract draft:', error.message);
       });
+    const u = getAuthUser();
+    if (u) logAudit({ userId: u.id, userName: u.name, userRole: u.role,
+      action: 'draft.retract_review', entityType: 'draft', entityId: id,
+      entityName: draft?.set.name || 'Untitled' });
   },
 
   promoteDraft: (id) => {
     const ts = nowStr();
+    const draft = get().drafts.find(d => d.id === id);
     set(state => ({
       drafts: state.drafts.map(d =>
         d.id === id ? { ...d, promoted: true, updatedAt: ts } : d
@@ -173,6 +218,10 @@ export const useDraftsStore = create<DraftsState>()((set, get) => ({
       .eq('id', id).then(({ error }) => {
         if (error) console.error('Failed to promote draft:', error.message);
       });
+    const u = getAuthUser();
+    if (u) logAudit({ userId: u.id, userName: u.name, userRole: u.role,
+      action: 'draft.promote', entityType: 'draft', entityId: id,
+      entityName: draft?.set.name || 'Untitled' });
   },
 
   getDraft: (id) => get().drafts.find(d => d.id === id),
