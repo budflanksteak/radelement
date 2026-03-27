@@ -96,8 +96,9 @@ export const useDraftsStore = create<DraftsState>()((set, get) => ({
     const authUser = getAuthUser();
     const defaultSet = makeDefaultSet();
     const authorPerson = {
-      name: authorName,
+      name: authUser?.name || authorName,
       role: 'Author',
+      ...(authUser?.email    ? { email:    authUser.email    } : {}),
       ...(authUser?.orcid_id ? { orcid_id: authUser.orcid_id } : {}),
     };
     const mergedContributors = {
