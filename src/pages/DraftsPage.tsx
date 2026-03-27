@@ -240,15 +240,15 @@ export function DraftsPage() {
                     </Button>
                   )}
 
-                  {/* Submit for review — own non-promoted drafts */}
-                  {isOwn && !draft.submittedForReview && !draft.promoted && (
+                  {/* Submit for review — own drafts, or any draft if admin */}
+                  {(isOwn || isAdmin) && !draft.submittedForReview && !draft.promoted && (
                     <Button size="sm" variant="secondary" onClick={() => submitForReview(draft.id)}>
                       <Send size={12} /> Submit
                     </Button>
                   )}
 
-                  {/* Retract — own, submitted, not promoted */}
-                  {isOwn && draft.submittedForReview && !draft.promoted && (
+                  {/* Retract — own drafts, or any draft if admin */}
+                  {(isOwn || isAdmin) && draft.submittedForReview && !draft.promoted && (
                     <button
                       onClick={() => {
                         if (confirm('Retract from review? The draft will return to editable state. Existing comments are preserved.')) {
