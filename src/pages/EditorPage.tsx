@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Save, Plus, Trash2, ChevronUp, ChevronDown, Send,
@@ -588,8 +588,9 @@ function OntologySearchPanel({ onAdd }: { onAdd: (term: OntologyTerm) => void })
 export function EditorPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { user } = useAuthStore();
+  const { user, loading: authLoading } = useAuthStore();
   const { createDraft, updateDraft, getDraft, submitForReview } = useDraftsStore();
+  const initialized = useRef(false);
 
   const [draft, setDraftLocal] = useState(() => {
     if (id === 'new') return null;
@@ -602,14 +603,17 @@ export function EditorPage() {
   const [errors, setErrors] = useState<string[]>([]);
   const [activeSection, setActiveSection] = useState<'info' | 'elements' | 'codes'>('info');
 
-  // Redirect if not logged in
+  // Redirect if not logged in — wait for auth to finish loading first
   useEffect(() => {
-    if (!user) navigate('/login');
-  }, [user, navigate]);
+    if (!authLoading && !user) navigate('/login');
+  }, [user, authLoading, navigate]);
 
-  // Initialize
+  // Initialize — re-runs once user is confirmed loaded (guards against
+  // the race where auth hasn't resolved yet when the component mounts)
   useEffect(() => {
-    if (!user) return;
+    if (!user) return;               // auth still loading — wait
+    if (initialized.current) return; // already ran — don't duplicate
+    initialized.current = true;
 
     if (id === 'new') {
       const newDraft = createDraft(user.id, user.name);
@@ -641,7 +645,7 @@ export function EditorPage() {
     } else if (draft) {
       setSet(draft.set);
     }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSave = useCallback(() => {
     if (!draft || !set) return;
