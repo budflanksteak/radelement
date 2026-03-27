@@ -2,15 +2,11 @@ import { create } from 'zustand';
 import { CDESet, CDEElement, Draft } from '../types/cde';
 import { supabase } from '../lib/supabase';
 import { logAudit } from '../lib/auditLog';
+import { useAuthStore } from './authStore';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-let _authStore: any = null;
+// Called at function-call time (not module load), so circular dep is safe
 function getAuthUser() {
-  if (!_authStore) {
-    // Lazy to avoid circular dep at module load time
-    _authStore = require('./authStore');
-  }
-  return _authStore.useAuthStore.getState().user as import('../types/cde').User | null;
+  return useAuthStore.getState().user;
 }
 
 interface DraftsState {
