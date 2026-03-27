@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff, ArrowLeft } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { Input } from '../components/ui/Input';
 import { Button } from '../components/ui/Button';
@@ -24,12 +24,30 @@ export function LoginPage() {
   const [regEmail, setRegEmail] = useState('');
   const [regPassword, setRegPassword] = useState('');
 
-  const { login, register, user } = useAuthStore();
+  const [forgotView, setForgotView] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState('');
+
+  const { login, register, user, forgotPassword } = useAuthStore();
   const navigate = useNavigate();
 
   useEffect(() => {
     if (user) navigate('/');
   }, [user, navigate]);
+
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setLoading(true);
+    try {
+      await forgotPassword(forgotEmail);
+      setInfo('Password reset email sent. Check your inbox and follow the link to set a new password.');
+      setForgotEmail('');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to send reset email');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -74,38 +92,42 @@ export function LoginPage() {
             RE
           </div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
-            {tab === 'login' ? 'Welcome back' : 'Create an account'}
+            {forgotView ? 'Reset your password' : tab === 'login' ? 'Welcome back' : 'Create an account'}
           </h1>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-            {tab === 'login'
+            {forgotView
+              ? 'Enter your email and we\'ll send a reset link'
+              : tab === 'login'
               ? 'Sign in to author and review CDE sets'
               : 'Join the RadElement authoring community'}
           </p>
         </div>
 
-        {/* Tab switcher */}
-        <div className="flex rounded-xl bg-slate-100 p-1 mb-6 dark:bg-slate-800">
-          <button
-            onClick={() => { setTab('login'); setError(null); setInfo(null); }}
-            className={`flex-1 rounded-lg py-2 text-sm font-medium transition-colors ${
-              tab === 'login'
-                ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-700 dark:text-white'
-                : 'text-slate-600 hover:text-slate-900 dark:text-slate-400'
-            }`}
-          >
-            Sign In
-          </button>
-          <button
-            onClick={() => { setTab('register'); setError(null); setInfo(null); }}
-            className={`flex-1 rounded-lg py-2 text-sm font-medium transition-colors ${
-              tab === 'register'
-                ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-700 dark:text-white'
-                : 'text-slate-600 hover:text-slate-900 dark:text-slate-400'
-            }`}
-          >
-            Register
-          </button>
-        </div>
+        {/* Tab switcher — hidden in forgot view */}
+        {!forgotView && (
+          <div className="flex rounded-xl bg-slate-100 p-1 mb-6 dark:bg-slate-800">
+            <button
+              onClick={() => { setTab('login'); setError(null); setInfo(null); }}
+              className={`flex-1 rounded-lg py-2 text-sm font-medium transition-colors ${
+                tab === 'login'
+                  ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-700 dark:text-white'
+                  : 'text-slate-600 hover:text-slate-900 dark:text-slate-400'
+              }`}
+            >
+              Sign In
+            </button>
+            <button
+              onClick={() => { setTab('register'); setError(null); setInfo(null); }}
+              className={`flex-1 rounded-lg py-2 text-sm font-medium transition-colors ${
+                tab === 'register'
+                  ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-700 dark:text-white'
+                  : 'text-slate-600 hover:text-slate-900 dark:text-slate-400'
+              }`}
+            >
+              Register
+            </button>
+          </div>
+        )}
 
         {/* Form card */}
         <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-800">
@@ -120,7 +142,29 @@ export function LoginPage() {
             </div>
           )}
 
-          {tab === 'login' ? (
+          {forgotView ? (
+            <form onSubmit={handleForgotPassword} className="space-y-4">
+              <Input
+                label="Email address"
+                type="email"
+                value={forgotEmail}
+                onChange={e => setForgotEmail(e.target.value)}
+                placeholder="your@email.com"
+                autoComplete="email"
+                required
+              />
+              <Button type="submit" loading={loading} className="w-full">
+                Send Reset Link
+              </Button>
+              <button
+                type="button"
+                onClick={() => { setForgotView(false); setError(null); setInfo(null); }}
+                className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 transition-colors mx-auto"
+              >
+                <ArrowLeft size={14} /> Back to sign in
+              </button>
+            </form>
+          ) : tab === 'login' ? (
             <form onSubmit={handleLogin} className="space-y-4">
               <Input
                 label="Email"
@@ -132,7 +176,16 @@ export function LoginPage() {
                 required
               />
               <div className="flex flex-col gap-1">
-                <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Password</label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Password</label>
+                  <button
+                    type="button"
+                    onClick={() => { setForgotView(true); setForgotEmail(loginEmail); setError(null); setInfo(null); }}
+                    className="text-xs text-brand-600 hover:text-brand-700 dark:text-brand-400 dark:hover:text-brand-300 transition-colors"
+                  >
+                    Forgot password?
+                  </button>
+                </div>
                 <div className="relative">
                   <input
                     type={showPassword ? 'text' : 'password'}

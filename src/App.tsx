@@ -13,6 +13,7 @@ import { ReviewPage } from './pages/ReviewPage';
 import { AboutPage } from './pages/AboutPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { AdminPage } from './pages/AdminPage';
+import { ResetPasswordPage } from './pages/ResetPasswordPage';
 import { useThemeStore } from './store/themeStore';
 import { useAuthStore } from './store/authStore';
 import { useDraftsStore } from './store/draftsStore';
@@ -68,6 +69,7 @@ export function App() {
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/admin" element={<AdminPage />} />
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route path="*" element={
             <div className="flex flex-col items-center justify-center min-h-[50vh] text-center">
               <h1 className="text-4xl font-bold text-slate-900 dark:text-white">404</h1>

@@ -11,6 +11,8 @@ interface AuthState {
   register: (name: string, email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   updateProfile: (updates: Partial<User>) => Promise<void>;
+  forgotPassword: (email: string) => Promise<void>;
+  resetPassword: (newPassword: string) => Promise<void>;
 }
 
 async function fetchProfile(userId: string): Promise<User | null> {
@@ -103,5 +105,17 @@ export const useAuthStore = create<AuthState>()((set) => ({
       .eq('id', authUser.id);
     if (error) throw new Error(error.message);
     set(state => ({ user: state.user ? { ...state.user, ...updates } : null }));
+  },
+
+  forgotPassword: async (email) => {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+    if (error) throw new Error(error.message);
+  },
+
+  resetPassword: async (newPassword) => {
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    if (error) throw new Error(error.message);
   },
 }));
