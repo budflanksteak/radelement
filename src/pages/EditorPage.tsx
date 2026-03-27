@@ -884,6 +884,212 @@ export function EditorPage() {
               )}
             </div>
           </div>
+
+          {/* Contributors — People */}
+          <div className="rounded-xl border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-800">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <h2 className="text-sm font-semibold text-slate-900 dark:text-white">Contributors — People</h2>
+                <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Authors, editors, and reviewers credited on this CDE set.</p>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const people = [...(set.contributors?.people || []), { name: '', role: 'Author' }];
+                  updateSet({ contributors: { ...set.contributors, people } });
+                }}
+              >
+                <Plus size={12} /> Add Person
+              </Button>
+            </div>
+            <div className="space-y-3">
+              {(set.contributors?.people || []).map((person, i) => (
+                <div key={i} className="rounded-lg border border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/40 p-3 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Name *</label>
+                        <input
+                          value={person.name}
+                          onChange={e => {
+                            const people = [...(set.contributors?.people || [])];
+                            people[i] = { ...people[i], name: e.target.value };
+                            updateSet({ contributors: { ...set.contributors, people } });
+                          }}
+                          placeholder="Full name"
+                          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-900 outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white placeholder:text-slate-400"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Role</label>
+                        <select
+                          value={person.role || 'Author'}
+                          onChange={e => {
+                            const people = [...(set.contributors?.people || [])];
+                            people[i] = { ...people[i], role: e.target.value };
+                            updateSet({ contributors: { ...set.contributors, people } });
+                          }}
+                          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-900 outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white"
+                        >
+                          {['Author', 'Editor', 'Reviewer', 'Contributor'].map(r => (
+                            <option key={r} value={r}>{r}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const people = (set.contributors?.people || []).filter((_, j) => j !== i);
+                        updateSet({ contributors: { ...set.contributors, people } });
+                      }}
+                      className="mt-4 flex-shrink-0 rounded-lg p-1.5 text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                      title="Remove person"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">ORCID iD</label>
+                      <input
+                        value={person.orcid_id || ''}
+                        onChange={e => {
+                          const people = [...(set.contributors?.people || [])];
+                          people[i] = { ...people[i], orcid_id: e.target.value || undefined };
+                          updateSet({ contributors: { ...set.contributors, people } });
+                        }}
+                        placeholder="0000-0000-0000-0000"
+                        className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-mono text-slate-900 outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white placeholder:text-slate-400"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Email</label>
+                      <input
+                        value={person.email || ''}
+                        onChange={e => {
+                          const people = [...(set.contributors?.people || [])];
+                          people[i] = { ...people[i], email: e.target.value || undefined };
+                          updateSet({ contributors: { ...set.contributors, people } });
+                        }}
+                        placeholder="email@institution.org"
+                        type="email"
+                        className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-900 outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white placeholder:text-slate-400"
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
+              {!(set.contributors?.people?.length) && (
+                <p className="text-sm text-slate-400 dark:text-slate-500">No contributors added yet.</p>
+              )}
+            </div>
+          </div>
+
+          {/* Contributors — Organizations */}
+          <div className="rounded-xl border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-800">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <h2 className="text-sm font-semibold text-slate-900 dark:text-white">Contributors — Organizations</h2>
+                <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Institutions and societies that sponsored or reviewed this set.</p>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const organizations = [...(set.contributors?.organizations || []), { name: '', role: 'Sponsor' }];
+                  updateSet({ contributors: { ...set.contributors, organizations } });
+                }}
+              >
+                <Plus size={12} /> Add Organization
+              </Button>
+            </div>
+            <div className="space-y-3">
+              {(set.contributors?.organizations || []).map((org, i) => (
+                <div key={i} className="rounded-lg border border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/40 p-3 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Organization Name *</label>
+                        <input
+                          value={org.name}
+                          onChange={e => {
+                            const organizations = [...(set.contributors?.organizations || [])];
+                            organizations[i] = { ...organizations[i], name: e.target.value };
+                            updateSet({ contributors: { ...set.contributors, organizations } });
+                          }}
+                          placeholder="e.g. ACR, RSNA, SIIM"
+                          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-900 outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white placeholder:text-slate-400"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Role</label>
+                        <select
+                          value={org.role || 'Sponsor'}
+                          onChange={e => {
+                            const organizations = [...(set.contributors?.organizations || [])];
+                            organizations[i] = { ...organizations[i], role: e.target.value };
+                            updateSet({ contributors: { ...set.contributors, organizations } });
+                          }}
+                          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-900 outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white"
+                        >
+                          {['Sponsor', 'Publisher', 'Endorser', 'Contributor'].map(r => (
+                            <option key={r} value={r}>{r}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const organizations = (set.contributors?.organizations || []).filter((_, j) => j !== i);
+                        updateSet({ contributors: { ...set.contributors, organizations } });
+                      }}
+                      className="mt-4 flex-shrink-0 rounded-lg p-1.5 text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                      title="Remove organization"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Abbreviation</label>
+                      <input
+                        value={org.abbreviation || ''}
+                        onChange={e => {
+                          const organizations = [...(set.contributors?.organizations || [])];
+                          organizations[i] = { ...organizations[i], abbreviation: e.target.value || undefined };
+                          updateSet({ contributors: { ...set.contributors, organizations } });
+                        }}
+                        placeholder="e.g. ACR"
+                        className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-900 outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white placeholder:text-slate-400"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Website URL</label>
+                      <input
+                        value={org.url || ''}
+                        onChange={e => {
+                          const organizations = [...(set.contributors?.organizations || [])];
+                          organizations[i] = { ...organizations[i], url: e.target.value || undefined };
+                          updateSet({ contributors: { ...set.contributors, organizations } });
+                        }}
+                        placeholder="https://"
+                        type="url"
+                        className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-900 outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white placeholder:text-slate-400"
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
+              {!(set.contributors?.organizations?.length) && (
+                <p className="text-sm text-slate-400 dark:text-slate-500">No organizations added yet.</p>
+              )}
+            </div>
+          </div>
         </div>
       )}
 
