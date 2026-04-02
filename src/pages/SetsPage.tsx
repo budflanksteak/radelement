@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Search, Filter, X, ChevronLeft, ChevronRight, SlidersHorizontal } from 'lucide-react';
+import { Search, Filter, X, ChevronLeft, ChevronRight, SlidersHorizontal, LayoutGrid, List } from 'lucide-react';
 import { fetchSets } from '../api/radelement';
 import { CDESetSummary, getStatusName } from '../types/cde';
 import { SetCard } from '../components/cde/SetCard';
@@ -80,16 +80,35 @@ export function SetsPage() {
   }
 
   const hasFilters = q || statusFilter || specialtyFilter || modalityFilter;
+  const [view, setView] = useState<'card' | 'list'>('card');
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-white">CDE Sets</h1>
-        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-          {loading ? 'Loading…' : `${filtered.length.toLocaleString()} sets`}
-          {!loading && allSets.length !== filtered.length && ` of ${allSets.length.toLocaleString()} total`}
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">CDE Sets</h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+            {loading ? 'Loading…' : `${filtered.length.toLocaleString()} sets`}
+            {!loading && allSets.length !== filtered.length && ` of ${allSets.length.toLocaleString()} total`}
+          </p>
+        </div>
+        <div className="flex rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden">
+          <button
+            onClick={() => setView('card')}
+            title="Card view"
+            className={`p-1.5 transition-colors ${view === 'card' ? 'bg-brand-600 text-white' : 'bg-white text-slate-400 hover:text-slate-600 dark:bg-slate-800 dark:hover:text-slate-200'}`}
+          >
+            <LayoutGrid size={15} />
+          </button>
+          <button
+            onClick={() => setView('list')}
+            title="List view"
+            className={`p-1.5 transition-colors ${view === 'list' ? 'bg-brand-600 text-white' : 'bg-white text-slate-400 hover:text-slate-600 dark:bg-slate-800 dark:hover:text-slate-200'}`}
+          >
+            <List size={15} />
+          </button>
+        </div>
       </div>
 
       {/* Search + Filters */}
@@ -249,10 +268,16 @@ export function SetsPage() {
             Clear filters
           </button>
         </div>
-      ) : (
+      ) : view === 'card' ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {paginated.map(set => (
-            <SetCard key={set.id} set={set} />
+            <SetCard key={set.id} set={set} view="card" />
+          ))}
+        </div>
+      ) : (
+        <div className="flex flex-col gap-2">
+          {paginated.map(set => (
+            <SetCard key={set.id} set={set} view="list" />
           ))}
         </div>
       )}
