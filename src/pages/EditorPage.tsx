@@ -905,9 +905,42 @@ export function EditorPage() {
               </Button>
             </div>
             <div className="space-y-3">
-              {(set.contributors?.people || []).map((person, i) => (
+              {(set.contributors?.people || []).map((person, i) => {
+                const people = set.contributors?.people || [];
+                const moveUp = () => {
+                  const next = [...people];
+                  [next[i - 1], next[i]] = [next[i], next[i - 1]];
+                  updateSet({ contributors: { ...set.contributors, people: next } });
+                };
+                const moveDown = () => {
+                  const next = [...people];
+                  [next[i], next[i + 1]] = [next[i + 1], next[i]];
+                  updateSet({ contributors: { ...set.contributors, people: next } });
+                };
+                return (
                 <div key={i} className="rounded-lg border border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/40 p-3 space-y-2">
                   <div className="flex items-center gap-2">
+                    {/* Reorder buttons */}
+                    <div className="flex flex-col gap-0.5 shrink-0">
+                      <button
+                        type="button"
+                        onClick={moveUp}
+                        disabled={i === 0}
+                        className="rounded p-0.5 text-slate-400 hover:text-slate-600 disabled:opacity-20 dark:hover:text-slate-200 transition-colors"
+                        title="Move up"
+                      >
+                        <ChevronUp size={14} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={moveDown}
+                        disabled={i === people.length - 1}
+                        className="rounded p-0.5 text-slate-400 hover:text-slate-600 disabled:opacity-20 dark:hover:text-slate-200 transition-colors"
+                        title="Move down"
+                      >
+                        <ChevronDown size={14} />
+                      </button>
+                    </div>
                     <div className="flex-1 grid grid-cols-2 gap-2">
                       <div>
                         <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Name *</label>
@@ -981,7 +1014,8 @@ export function EditorPage() {
                     </div>
                   </div>
                 </div>
-              ))}
+                );
+              })}
               {!(set.contributors?.people?.length) && (
                 <p className="text-sm text-slate-400 dark:text-slate-500">No contributors added yet.</p>
               )}
@@ -1008,9 +1042,42 @@ export function EditorPage() {
               </Button>
             </div>
             <div className="space-y-3">
-              {(set.contributors?.organizations || []).map((org, i) => (
+              {(set.contributors?.organizations || []).map((org, i) => {
+                const orgs = set.contributors?.organizations || [];
+                const moveUp = () => {
+                  const next = [...orgs];
+                  [next[i - 1], next[i]] = [next[i], next[i - 1]];
+                  updateSet({ contributors: { ...set.contributors, organizations: next } });
+                };
+                const moveDown = () => {
+                  const next = [...orgs];
+                  [next[i], next[i + 1]] = [next[i + 1], next[i]];
+                  updateSet({ contributors: { ...set.contributors, organizations: next } });
+                };
+                return (
                 <div key={i} className="rounded-lg border border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/40 p-3 space-y-2">
                   <div className="flex items-center gap-2">
+                    {/* Reorder buttons */}
+                    <div className="flex flex-col gap-0.5 shrink-0">
+                      <button
+                        type="button"
+                        onClick={moveUp}
+                        disabled={i === 0}
+                        className="rounded p-0.5 text-slate-400 hover:text-slate-600 disabled:opacity-20 dark:hover:text-slate-200 transition-colors"
+                        title="Move up"
+                      >
+                        <ChevronUp size={14} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={moveDown}
+                        disabled={i === orgs.length - 1}
+                        className="rounded p-0.5 text-slate-400 hover:text-slate-600 disabled:opacity-20 dark:hover:text-slate-200 transition-colors"
+                        title="Move down"
+                      >
+                        <ChevronDown size={14} />
+                      </button>
+                    </div>
                     <div className="flex-1 grid grid-cols-2 gap-2">
                       <div>
                         <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Organization Name *</label>
@@ -1084,7 +1151,8 @@ export function EditorPage() {
                     </div>
                   </div>
                 </div>
-              ))}
+                );
+              })}
               {!(set.contributors?.organizations?.length) && (
                 <p className="text-sm text-slate-400 dark:text-slate-500">No organizations added yet.</p>
               )}
