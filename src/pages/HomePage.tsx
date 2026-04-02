@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Database, Layers, BookOpen, ArrowRight, TrendingUp, Shield, Zap, Globe } from 'lucide-react';
+import { Search, Database, Layers, BookOpen, ArrowRight, TrendingUp, Shield, Zap, Globe, LayoutGrid, List } from 'lucide-react';
 import { fetchSets } from '../api/radelement';
 import { CDESetSummary, getStatusName } from '../types/cde';
 import { SetCard } from '../components/cde/SetCard';
@@ -18,6 +18,7 @@ export function HomePage() {
   const [sets, setSets] = useState<CDESetSummary[]>([]);
   const [stats, setStats] = useState({ total: 0, published: 0, elements: 0 });
   const [loading, setLoading] = useState(true);
+  const [setsView, setSetsView] = useState<'card' | 'list'>('card');
 
   useEffect(() => {
     fetchSets({ limit: 100 })
@@ -123,9 +124,28 @@ export function HomePage() {
             <h2 className="text-xl font-bold text-slate-900 dark:text-white">Published CDE Sets</h2>
             <p className="text-sm text-slate-500 dark:text-slate-400">Peer-reviewed and ready for clinical use</p>
           </div>
-          <Button variant="ghost" size="sm" onClick={() => navigate('/sets?status=Published')}>
-            View all <ArrowRight size={14} />
-          </Button>
+          <div className="flex items-center gap-2">
+            {/* View toggle */}
+            <div className="flex rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden">
+              <button
+                onClick={() => setSetsView('card')}
+                title="Card view"
+                className={`p-1.5 transition-colors ${setsView === 'card' ? 'bg-brand-600 text-white' : 'bg-white text-slate-400 hover:text-slate-600 dark:bg-slate-800 dark:hover:text-slate-200'}`}
+              >
+                <LayoutGrid size={15} />
+              </button>
+              <button
+                onClick={() => setSetsView('list')}
+                title="List view"
+                className={`p-1.5 transition-colors ${setsView === 'list' ? 'bg-brand-600 text-white' : 'bg-white text-slate-400 hover:text-slate-600 dark:bg-slate-800 dark:hover:text-slate-200'}`}
+              >
+                <List size={15} />
+              </button>
+            </div>
+            <Button variant="ghost" size="sm" onClick={() => navigate('/sets?status=Published')}>
+              View all <ArrowRight size={14} />
+            </Button>
+          </div>
         </div>
         {loading ? (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -133,10 +153,16 @@ export function HomePage() {
               <div key={i} className="h-40 rounded-xl border border-slate-200 bg-slate-100 animate-pulse dark:border-slate-700 dark:bg-slate-800" />
             ))}
           </div>
-        ) : (
+        ) : setsView === 'card' ? (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {featured.map(set => (
-              <SetCard key={set.id} set={set} />
+              <SetCard key={set.id} set={set} view="card" />
+            ))}
+          </div>
+        ) : (
+          <div className="flex flex-col gap-2">
+            {featured.map(set => (
+              <SetCard key={set.id} set={set} view="list" />
             ))}
           </div>
         )}

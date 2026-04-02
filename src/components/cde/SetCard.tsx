@@ -8,15 +8,49 @@ import { clsx } from 'clsx';
 interface SetCardProps {
   set: CDESetSummary & { elementCount?: number };
   compact?: boolean;
+  view?: 'card' | 'list';
 }
 
-export function SetCard({ set, compact }: SetCardProps) {
+export function SetCard({ set, compact, view = 'card' }: SetCardProps) {
   const navigate = useNavigate();
   const statusName = getStatusName(set.status as any);
 
   const modalityCodes = set.modality
     ? set.modality.split(',').map(m => m.trim()).filter(Boolean)
     : [];
+
+  if (view === 'list') {
+    return (
+      <div
+        onClick={() => navigate(`/sets/${set.id}`)}
+        className="group cursor-pointer flex items-center gap-4 rounded-lg border border-slate-200 bg-white px-4 py-3 transition-all hover:border-brand-300 hover:bg-brand-50/30 dark:border-slate-700 dark:bg-slate-800 dark:hover:border-brand-600 dark:hover:bg-brand-900/10"
+      >
+        <span className="font-mono text-xs text-slate-400 dark:text-slate-500 w-24 shrink-0">{set.id}</span>
+        <StatusBadge status={statusName} />
+        <h3 className="flex-1 min-w-0 font-medium text-slate-900 dark:text-white group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors truncate">
+          {set.name}
+        </h3>
+        <div className="hidden sm:flex items-center gap-1.5 shrink-0">
+          {modalityCodes.slice(0, 3).map(mod => (
+            <span key={mod} className={clsx('rounded px-1.5 py-0.5 text-xs font-semibold', MODALITY_COLORS[mod] || 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300')}>
+              {mod}
+            </span>
+          ))}
+          {set.specialties?.slice(0, 2).map(sp => (
+            <span key={sp.code} className={clsx('rounded px-1.5 py-0.5 text-xs font-medium', SPECIALTY_COLORS[sp.code] || 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300')}>
+              {sp.short_name || sp.code}
+            </span>
+          ))}
+        </div>
+        {set.elementCount !== undefined && (
+          <span className="hidden md:flex items-center gap-1 text-xs text-slate-400 dark:text-slate-500 shrink-0 w-20 justify-end">
+            <Layers size={11} />{set.elementCount} el.
+          </span>
+        )}
+        <ChevronRight size={14} className="shrink-0 text-slate-300 group-hover:text-brand-500 dark:text-slate-600 transition-colors" />
+      </div>
+    );
+  }
 
   return (
     <div
